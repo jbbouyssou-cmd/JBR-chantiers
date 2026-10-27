@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JBR Chantiers</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font:16px Arial,sans-serif;background:#f3f5f7;color:#17212b}
+header{background:#123c35;color:white;padding:22px}
+header h1{margin:0;font-size:25px}
+header p{margin:7px 0 0;color:#d2e5df}
+main{max-width:850px;margin:25px auto;padding:0 15px}
+.card{background:white;padding:22px;border-radius:14px;margin-bottom:16px;box-shadow:0 2px 8px #0000000d}
+h2{margin-top:0;font-size:21px}
+input,button{width:100%;padding:13px;margin:7px 0;border-radius:8px;font-size:16px}
+input{border:1px solid #cbd5d1}
+button{border:0;background:#176b53;color:white;font-weight:bold;cursor:pointer}
+button.secondary{background:#e7efec;color:#174b3d}
+.muted{color:#66736e;font-size:14px}
+.item{padding:13px 0;border-bottom:1px solid #e5e9e7}
+#app{display:none}
+#message{white-space:pre-wrap;color:#a12b25}
+nav{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+footer{text-align:center;color:#77817d;font-size:12px;padding:20px}
+</style>
+</head>
+<body>
+<header>
+  <h1>JBR CHANTIERS</h1>
+  <p>JBR Plomberie Chauffage · Gestion des chantiers</p>
+</header>
+<main>
+  <section id="login" class="card">
+    <h2>Connexion à votre espace</h2>
+    <p class="muted">Connectez-vous avec votre compte JBR.</p>
+    <form id="loginForm">
+      <input id="email" type="email" placeholder="Adresse e-mail" required autocomplete="username">
+      <input id="password" type="password" placeholder="Mot de passe" required autocomplete="current-password">
+      <button type="submit">Se connecter</button>
+    </form>
+    <p id="message"></p>
+    <p class="muted">Les comptes salariés doivent être créés par un gérant.</p>
+  </section>
+
+  <section id="app">
+    <div class="card">
+      <h2>Bonjour !</h2>
+      <p id="userEmail" class="muted"></p>
+      <nav>
+        <button onclick="showSection('chantiers')">Mes chantiers</button>
+        <button onclick="showSection('materiel')">Matériel à commander</button>
+        <button onclick="showSection('journal')">Journal de chantier</button>
+        <button class="secondary" onclick="logout()">Déconnexion</button>
+      </nav>
+    </div>
+    <div id="chantiers" class="card">
+      <h2>Mes chantiers</h2>
+      <p class="muted">La liste apparaîtra ici une fois la base de données reliée et les droits d’accès vérifiés.</p>
+      <div class="item">Suivi des chantiers · À connecter</div>
+    </div>
+    <div id="materiel" class="card" hidden>
+      <h2>Demandes de matériel</h2>
+      <p>La connexion des demandes de matériel reste à finaliser.</p>
+    </div>
+    <div id="journal" class="card" hidden>
+      <h2>Journal de chantier</h2>
+      <p>Les notes, problèmes et avancements seront affichés après raccordement de la base.</p>
+    </div>
+    <div class="card">
+      <p class="muted">Version initiale — les données métier ne sont pas encore connectées.</p>
+    </div>
+  </section>
+</main>
+<footer>JBR Plomberie Chauffage · Application interne</footer>
+
+<script type="module">
+import { createClient } from
+'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://xwqupnwxydbbqivnwiza.supabase.co',
+  'sb_publishable_HcKDAYMBXZjKcyplVIVj4w_rNZpzucR'
+);
+
+const login = document.getElementById('login');
+const app = document.getElementById('app');
+const message = document.getElementById('message');
+
+async function updateSession(session) {
+  login.style.display = session ? 'none' : 'block';
+  app.style.display = session ? 'block' : 'none';
+  if (session) {
+    document.getElementById('userEmail').textContent =
+      session.user.email || '';
+  }
+}
+
+document.getElementById('loginForm').addEventListener('submit',
+  async (event) => {
+    event.preventDefault();
+    message.textContent = 'Connexion en cours…';
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: document.getElementById('email').value.trim(),
+      password: document.getElementById('password').value
+    });
+    if (error) {
+      message.textContent = 'Connexion impossible : vérifie tes identifiants.';
+      return;
+    }
+    message.textContent = '';
+    await updateSession(data.session);
+  }
+);
+
+window.logout = async () => {
+  await supabase.auth.signOut();
+  await updateSession(null);
+};
+
+window.showSection = (id) => {
+  ['chantiers','materiel','journal'].forEach(section => {
+    document.getElementById(section).hidden = section !== id;
+  });
+};
+
+const { data } = await supabase.auth.getSession();
+await updateSession(data.session);
+
+supabase.auth.onAuthStateChange((_event, session) => {
+  updateSession(session);
+});
+</script>
+</body>
+</html>
